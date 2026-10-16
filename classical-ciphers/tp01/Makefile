@@ -1,37 +1,61 @@
-CC      = gcc
-CFLAGS  = -std=c11 -Wall -Wextra -Wpedantic -O2 -Iinclude
-SRC_DIR = src
-OBJ_DIR = build
-TEST_DIR = tests
+CC      := gcc
+CFLAGS  := -std=c11 -Wall -Wextra -Wpedantic -O2 -Iinclude
 
-LIB_SRCS = $(SRC_DIR)/caesar.c $(SRC_DIR)/vigenere.c
-LIB_OBJS = $(OBJ_DIR)/caesar.o $(OBJ_DIR)/vigenere.o
+SRC_DIR  := src
+OBJ_DIR  := build
+TEST_DIR := tests
 
-.PHONY: all clean test demo
+# Auto-discover library sources (everything in src/ except main.c)
+LIB_SRCS := $(filter-out $(SRC_DIR)/main.c, $(wildcard $(SRC_DIR)/*.c))
+LIB_OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(LIB_SRCS))
 
-all: demo test
+# Auto-discover test sources and derive binary names
+TEST_SRCS := $(wildcard $(TEST_DIR)/*.c)
+TEST_BINS := $(patsubst $(TEST_DIR)/%.c, $(OBJ_DIR)/%, $(TEST_SRCS))
 
+DEMO_BIN := $(OBJ_DIR)/tp01_demo
+MAIN_OBJ := $(OBJ_DIR)/main.o
+
+.PHONY: all test run clean help
+
+# Default: build everything without running tests
+all: $(DEMO_BIN) $(TEST_BINS)
+
+# Create build dir if needed
 $(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
+	mkdir -p $@
 
+# Compile any .c from src/ into a .o (covers lib files and main.c)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-demo: $(LIB_OBJS) $(SRC_DIR)/main.c
-	$(CC) $(CFLAGS) $(SRC_DIR)/main.c $(LIB_OBJS) -o $(OBJ_DIR)/tp01_demo
+# Link the demo binary
+$(DEMO_BIN): $(MAIN_OBJ) $(LIB_OBJS)
+	$(CC) $(CFLAGS) $^ -o $@
 
-$(OBJ_DIR)/test_caesar: $(LIB_OBJS) $(TEST_DIR)/test_caesar.c
-	$(CC) $(CFLAGS) $(TEST_DIR)/test_caesar.c $(LIB_OBJS) -o $@
+# Link each test binary — explicit test_% rule prevents pattern ambiguity
+$(OBJ_DIR)/test_%: $(TEST_DIR)/test_%.c $(LIB_OBJS) | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $^ -o $@
 
-$(OBJ_DIR)/test_vigenere: $(LIB_OBJS) $(TEST_DIR)/test_vigenere.c
-	$(CC) $(CFLAGS) $(TEST_DIR)/test_vigenere.c $(LIB_OBJS) -o $@
+# Build and run all tests
+test: $(TEST_BINS)
+	@for bin in $(TEST_BINS); do \
+		echo "===== $$(basename $$bin) ====="; \
+		$$bin; \
+		echo; \
+	done
 
-test: $(OBJ_DIR)/test_caesar $(OBJ_DIR)/test_vigenere
-	@echo "===== Caesar tests ====="
-	@$(OBJ_DIR)/test_caesar
-	@echo
-	@echo "===== Vigenere tests ====="
-	@$(OBJ_DIR)/test_vigenere
+# Build and run the demo
+run: $(DEMO_BIN)
+	@$(DEMO_BIN)
 
 clean:
 	rm -rf $(OBJ_DIR)
+
+help:
+	@echo "Targets:"
+	@echo "  all    - Build demo and test binaries (default)"
+	@echo "  test   - Build and run all tests"
+	@echo "  run    - Build and run the demo"
+	@echo "  clean  - Remove build artifacts"
+	@echo "  help   - Show this message"
