@@ -4,7 +4,7 @@ Labs, exercises, and implementations from my cryptography course at Université 
 
 ## Contents
 
-- `classical-ciphers/` - Caesar, Vigenère, and other historical ciphers
+- `classical-ciphers/tp01/` - Caesar & Vigenère in C (TP N°1)
 - `symmetric/` - block and stream ciphers (e.g. AES, modes of operation)
 - `asymmetric/` - RSA, Diffie-Hellman, key exchange
 - `hashing/` - hash functions, HMAC, integrity checks
